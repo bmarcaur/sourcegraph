@@ -89,8 +89,8 @@ func (cs *ChangesetSpec) computeDiffStat() error {
 		stats.Changed += stat.Changed
 	}
 
-	cs.DiffStatAdded = stats.Added
-	cs.DiffStatDeleted = stats.Deleted
+	cs.DiffStatAdded = stats.Added + stats.Changed
+	cs.DiffStatDeleted = stats.Deleted + stats.Changed
 
 	return nil
 }
