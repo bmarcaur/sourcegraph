@@ -66,11 +66,7 @@ func (s *scheduler) handleError(err error) {
 	s.logger.Error("Failed to schedule index jobs", log.Error(err))
 }
 
-func (s *scheduler) handleRepository(
-	ctx context.Context,
-	repositoryID int,
-	now time.Time,
-) error {
+func (s *scheduler) handleRepository(ctx context.Context, repositoryID int, now time.Time) error {
 	offset := 0
 
 	for {
