@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react'
 
 import classNames from 'classnames'
-import { groupBy, startCase, sumBy } from 'lodash'
+import { groupBy, sortBy, startCase, sumBy } from 'lodash'
 import { RouteComponentProps } from 'react-router'
 
 import { useQuery } from '@sourcegraph/http-client'
@@ -234,7 +234,7 @@ export const AnalyticsCodeIntelPage: React.FunctionComponent<RouteComponentProps
             return undefined
         }
 
-        return Object.entries(groupBy(allRows, row => row.name)).map(([name, rows]) => ({
+        const unsortedRepos = Object.entries(groupBy(allRows, row => row.name)).map(([name, rows]) => ({
             repoName: name,
             events: sumBy(rows, row => row.events),
             hoursSaved: sumBy(
@@ -274,6 +274,8 @@ export const AnalyticsCodeIntelPage: React.FunctionComponent<RouteComponentProps
                 return <>{items}</>
             })(),
         }))
+
+        return sortBy(unsortedRepos, repo => -repo.events)
     })()
 
     return (
