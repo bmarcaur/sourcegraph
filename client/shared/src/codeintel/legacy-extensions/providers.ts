@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs'
-import * as sourcegraph from '@sourcegraph/extension-api-types'
+import * as sourcegraph from './legacy-interfaces'
 
 import * as indicators from './indicators'
 import { LanguageSpec, LSIFSupport } from './language-specs/language-spec'

@@ -1,5 +1,6 @@
 import { once } from 'lodash'
-import { Position, TextDocument } from '@sourcegraph/extension-api-types'
+import * as scip from '../../scip'
+import * as sourcegraph from '../legacy-interfaces'
 
 import { Logger } from '../logging'
 import { CombinedProviders, DefinitionAndHover } from '../providers'
@@ -61,7 +62,11 @@ const RANGE_RESOLUTION_DELAY_MS = 25
 
 type StencilResult = 'hit' | 'miss' | 'unknown'
 
-export async function searchStencil(uri: string, position: Position, getStencil: StencilFn): Promise<StencilResult> {
+export async function searchStencil(
+    uri: string,
+    position: scip.Position,
+    getStencil: StencilFn
+): Promise<StencilResult> {
     const stencil = await getStencil(uri)
     if (stencil === undefined) {
         return 'unknown'
@@ -92,7 +97,7 @@ export async function searchStencil(uri: string, position: Position, getStencil:
         }
 
         // Do accurate check
-        if (new Range(start.line, start.character, end.line, end.character).contains(position)) {
+        if (scip.Range.of(start.line, start.character, end.line, end.character).contains(position)) {
             return 'hit'
         }
     }
@@ -105,8 +110,11 @@ function definitionAndHover(
     queryGraphQL: QueryGraphQLFn<any>,
     getStencil: StencilFn,
     getRangeFromWindow?: Promise<RangeWindowFactoryFn>
-): (textDocument: sourcegraph.TextDocument, position: sourcegraph.Position) => Promise<DefinitionAndHover | null> {
-    return async (textDocument: TextDocument, position: sourcegraph.Position): Promise<DefinitionAndHover | null> => {
+): (textDocument: sourcegraph.TextDocument, position: scip.Position) => Promise<DefinitionAndHover | null> {
+    return async (
+        textDocument: sourcegraph.TextDocument,
+        position: scip.Position
+    ): Promise<DefinitionAndHover | null> => {
         if ((await searchStencil(textDocument.uri, position, getStencil)) === 'miss') {
             return null
         }

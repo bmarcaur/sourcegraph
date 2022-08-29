@@ -1,5 +1,6 @@
 // TODO: Eventually we'll import the actual lsif-typed protobuf file in this project,
 // but it doesn't make sense to do so right now.
+import * as sourcegraph from './legacy-extensions/legacy-interfaces'
 
 export interface JsonDocument {
     occurrences?: JsonOccurrence[]
@@ -15,7 +16,7 @@ export interface JsonOccurrence {
     syntaxKind?: SyntaxKind
 }
 
-export class Position {
+export class Position implements sourcegraph.Position {
     constructor(public readonly line: number, public readonly character: number) {}
 
     public isSmaller(other: Position): boolean {
@@ -40,6 +41,12 @@ export class Position {
 
 export class Range {
     constructor(public readonly start: Position, public readonly end: Position) {}
+    public static of(startLine: number, startCharacter: number, endLine: number, endCharacter: number) {
+        return new Range(new Position(startLine, startCharacter), new Position(endLine, endCharacter))
+    }
+    public contains(position: Position) {
+        return this.start.isSmallerOrEqual(position) && this.end.isGreater(position)
+    }
     public withStart(newStart: Position): Range {
         return new Range(newStart, this.end)
     }
@@ -50,7 +57,7 @@ export class Range {
         return this.start.compare(this.end) === 0
     }
     public isOverlapping(other: Range): boolean {
-        return this.start.isSmallerOrEqual(other.start) && this.end.isGreater(other.start)
+        return this.contains(other.start)
     }
     public isSingleLine(): boolean {
         return this.start.line === this.end.line
@@ -254,4 +261,8 @@ export enum SyntaxKind {
     TagAttribute = 35,
     // Delimiters for XML-like tags
     TagDelimiter = 36,
+}
+
+export interface TextDocument {
+    uri: string
 }
