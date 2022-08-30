@@ -1,4 +1,4 @@
-## Rolling back a Postgres database
+# Rolling back a Postgres database
 
 > WARNING: **Rolling back the database may result in data loss.** Rolling back the database schema may remove tables or columns that were not present in previous versions of Sourcegraph.
 
