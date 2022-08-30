@@ -6,8 +6,6 @@ import (
 	"net/url"
 	"sort"
 
-	"github.com/sourcegraph/log"
-
 	"github.com/sourcegraph/sourcegraph/enterprise/internal/batches/store"
 	btypes "github.com/sourcegraph/sourcegraph/enterprise/internal/batches/types"
 	"github.com/sourcegraph/sourcegraph/internal/database"
@@ -16,7 +14,6 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/extsvc/auth"
 	"github.com/sourcegraph/sourcegraph/internal/gitserver/protocol"
 	"github.com/sourcegraph/sourcegraph/internal/httpcli"
-	"github.com/sourcegraph/sourcegraph/internal/repos"
 	"github.com/sourcegraph/sourcegraph/internal/types"
 	"github.com/sourcegraph/sourcegraph/internal/vcs"
 	"github.com/sourcegraph/sourcegraph/lib/errors"
@@ -122,14 +119,14 @@ func (s *sourcer) loadBatchesSource(ctx context.Context, tx SourcerStore, extern
 // GitserverPushConfig creates a push configuration given a repo and an
 // authenticator. This function is only public for testing purposes, and should
 // not be used otherwise.
-func GitserverPushConfig(ctx context.Context, store database.ExternalServiceStore, repo *types.Repo, au auth.Authenticator) (*protocol.PushConfig, error) {
+func GitserverPushConfig(ctx context.Context, repo *types.Repo, au auth.Authenticator) (*protocol.PushConfig, error) {
 	// Empty authenticators are not allowed.
 	if au == nil {
 		return nil, ErrNoPushCredentials{}
 	}
 
 	extSvcType := repo.ExternalRepo.ServiceType
-	cloneURL, err := extractCloneURL(ctx, store, repo)
+	cloneURL, err := extractCloneURL(ctx, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +196,7 @@ func ToDraftChangesetSource(css ChangesetSource) (DraftChangesetSource, error) {
 // will be used.
 func WithAuthenticatorForChangeset(
 	ctx context.Context, tx SourcerStore, css ChangesetSource,
-	ch *btypes.Changeset, repo *types.Repo, allowExternalServiceFallback bool,
+	ch *btypes.Changeset, repo *types.Repo,
 ) (ChangesetSource, error) {
 	if ch.OwnedByBatchChangeID != 0 {
 		batchChange, err := loadBatchChange(ctx, tx, ch.OwnedByBatchChangeID)
@@ -207,20 +204,10 @@ func WithAuthenticatorForChangeset(
 			return nil, errors.Wrap(err, "failed to load owning batch change")
 		}
 
-		a, err := WithAuthenticatorForUser(ctx, tx, css, batchChange.LastApplierID, repo)
-		// FIXME: If there's no credential, then we fall back through to
-		// withSiteAuthenticator below, which will ultimately use the external
-		// service configuration credential if no site credential is available.
-		// We want to remove that.
-		if err == ErrMissingCredentials && allowExternalServiceFallback {
-			return css, nil
-		}
-		return a, err
+		return WithAuthenticatorForUser(ctx, tx, css, batchChange.LastApplierID, repo)
 	}
 
-	// Imported changesets are always allowed to fall back to the global token
-	// at present.
-	return withSiteAuthenticator(ctx, tx, css, repo, true)
+	return withSiteAuthenticator(ctx, tx, css, repo)
 }
 
 type getBatchChanger interface {
@@ -255,35 +242,20 @@ func WithAuthenticatorForUser(ctx context.Context, tx SourcerStore, css Changese
 		return css.WithAuthenticator(cred)
 	}
 
-	cred, err = loadSiteCredential(ctx, tx, repo)
-	if err != nil {
-		return nil, errors.Wrap(err, "loading site credential")
-	}
-	if cred != nil {
-		return css.WithAuthenticator(cred)
-	}
-
-	// Otherwise, we can't authenticate the given ChangesetSource, so we need to bail out.
-	return nil, ErrMissingCredentials
+	// Fall back to site credentials.
+	return withSiteAuthenticator(ctx, tx, css, repo)
 }
 
 // withSiteAuthenticator uses the site credential of the code host of the passed-in repo.
 // If no credential is found, the original source is returned and uses the external service
 // config.
-func withSiteAuthenticator(
-	ctx context.Context, tx SourcerStore, css ChangesetSource,
-	repo *types.Repo, allowExternalServiceFallback bool,
-) (ChangesetSource, error) {
+func withSiteAuthenticator(ctx context.Context, tx SourcerStore, css ChangesetSource, repo *types.Repo) (ChangesetSource, error) {
 	cred, err := loadSiteCredential(ctx, tx, repo)
 	if err != nil {
 		return nil, errors.Wrap(err, "loading site credential")
 	}
 	if cred != nil {
 		return css.WithAuthenticator(cred)
-	}
-	if allowExternalServiceFallback {
-		// FIXME: this branch shouldn't exist.
-		return css, nil
 	}
 	return nil, ErrMissingCredentials
 }
@@ -309,27 +281,18 @@ func loadExternalService(ctx context.Context, s database.ExternalServiceStore, o
 			return nil, err
 		}
 
-		switch cfg := cfg.(type) {
+		switch cfg.(type) {
 		case *schema.GitHubConnection:
-			if cfg.Token != "" {
-				return e, nil
-			}
+			return e, nil
 		case *schema.BitbucketServerConnection:
-			if cfg.Token != "" {
-				return e, nil
-			}
+			return e, nil
 		case *schema.GitLabConnection:
-			if cfg.Token != "" {
-				return e, nil
-			}
+			return e, nil
 		case *schema.BitbucketCloudConnection:
-			if cfg.AppPassword != "" {
-				return e, nil
-			}
+			return e, nil
 		}
 	}
 
-	// TODO: Allow external service configs with no token, too.
 	return nil, errors.New("no external services found")
 }
 
@@ -420,32 +383,26 @@ func setBasicAuth(u *vcs.URL, extSvcType, username, password string) error {
 }
 
 // extractCloneURL returns a remote URL from the repo, preferring HTTPS over SSH.
-func extractCloneURL(ctx context.Context, s database.ExternalServiceStore, repo *types.Repo) (string, error) {
+func extractCloneURL(ctx context.Context, repo *types.Repo) (string, error) {
 	if len(repo.Sources) == 0 {
 		return "", errors.New("no clone URL found for repo")
 	}
 
-	externalServiceIDs := make([]int64, 0, len(repo.Sources))
-	for _, source := range repo.Sources {
-		externalServiceIDs = append(externalServiceIDs, source.ExternalServiceID())
-	}
+	// externalServiceIDs := make([]int64, 0, len(repo.Sources))
+	// for _, source := range repo.Sources {
+	// 	externalServiceIDs = append(externalServiceIDs, source.ExternalServiceID())
+	// }
 
-	svcs, err := s.List(ctx, database.ExternalServicesListOptions{
-		IDs: externalServiceIDs,
-	})
-	if err != nil {
-		return "", err
-	}
+	// svcs, err := s.List(ctx, database.ExternalServicesListOptions{
+	// 	IDs: externalServiceIDs,
+	// })
+	// if err != nil {
+	// 	return "", err
+	// }
 
-	cloneURLs := make([]*vcs.URL, 0, len(svcs))
-	for _, svc := range svcs {
-		// build the clone url using the external service config instead of using
-		// the source CloneURL field
-		cloneURL, err := repos.EncryptableCloneURL(ctx, log.Scoped("CloneURL", ""), svc.Kind, svc.Config, repo)
-		if err != nil {
-			return "", err
-		}
-		parsedURL, err := vcs.ParseURL(cloneURL)
+	cloneURLs := make([]*vcs.URL, 0, len(repo.Sources))
+	for _, src := range repo.Sources {
+		parsedURL, err := vcs.ParseURL(src.CloneURL)
 		if err != nil {
 			return "", err
 		}
@@ -455,9 +412,9 @@ func extractCloneURL(ctx context.Context, s database.ExternalServiceStore, repo 
 		return !cloneURLs[i].IsSSH()
 	})
 	cloneURL := cloneURLs[0]
-	// TODO: Do this once we don't want to use existing credentials anymore.
-	// // Remove any existing credentials from the clone URL.
-	// parsedU.User = nil
+	// Remove any existing credentials from the clone URL, external service clone
+	// URLs aren't meant to be used in batch changes.
+	cloneURL.User = nil
 	return cloneURL.String(), nil
 }
 

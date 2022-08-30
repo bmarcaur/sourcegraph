@@ -543,12 +543,10 @@ func loadChangesetSource(
 	ch *btypes.Changeset, repo *types.Repo,
 ) (sources.ChangesetSource, error) {
 	srcer := sources.NewSourcer(cf)
-	// This is a ChangesetSource authenticated with the external service
-	// token.
 	source, err := srcer.ForRepo(ctx, syncStore, repo)
 	if err != nil {
 		return nil, err
 	}
 
-	return sources.WithAuthenticatorForChangeset(ctx, syncStore, source, ch, repo, true)
+	return sources.WithAuthenticatorForChangeset(ctx, syncStore, source, ch, repo)
 }
