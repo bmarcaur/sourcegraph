@@ -1,8 +1,8 @@
 import { TextDocumentPositionParameters } from '@sourcegraph/client-api'
 import { MaybeLoadingResult } from '@sourcegraph/codeintellify'
 import * as comlink from 'comlink'
-import { from, Subscription } from 'rxjs'
-import { first } from 'rxjs/operators'
+import { from, Observable, Subscription } from 'rxjs'
+import { first, map } from 'rxjs/operators'
 import { Unsubscribable } from 'sourcegraph'
 import { newCodeIntelAPI } from '../../codeintel/api'
 
@@ -102,22 +102,27 @@ export async function createExtensionHostClientConnection(
 
 function injectNewCodeintel(old: comlink.Remote<FlatExtensionHostAPI>): comlink.Remote<FlatExtensionHostAPI> {
     const codeintel = newCodeIntelAPI({} as any)
-    function thenMaybeLoadingResult<T>(promise: Promise<T>): Promise<MaybeLoadingResult<T>> {
-        return promise.then<MaybeLoadingResult<T>>(result => {
-            const maybeLoadingResult: MaybeLoadingResult<T> = { isLoading: false, result }
-            return maybeLoadingResult
-        })
+    function thenMaybeLoadingResult<T>(promise: Observable<T>): Observable<MaybeLoadingResult<T>> {
+        return promise.pipe(
+            map(result => {
+                const maybeLoadingResult: MaybeLoadingResult<T> = { isLoading: false, result }
+                return maybeLoadingResult
+            })
+        )
     }
 
-    const getHover = (textParameters: TextDocumentPositionParameters) => {
-        console.log({ textParameters })
-        return proxySubscribable(from(thenMaybeLoadingResult(codeintel.getHover(textParameters))))
+    const overrides: Pick<FlatExtensionHostAPI, 'getHover'> = {
+        getHover: (textParameters: TextDocumentPositionParameters) => {
+            console.log({ textParameters })
+            return proxySubscribable(from(thenMaybeLoadingResult(codeintel.getHover(textParameters))))
+        },
     }
+
     return new Proxy(old, {
-        get(target, prop, receiver) {
-            if (prop === 'getHover') {
-                console.log({ arguments })
-                return getHover
+        get(target, prop) {
+            const fn = (overrides as any)[prop]
+            if (fn) {
+                return fn
             }
             return Reflect.get(target, prop, ...arguments)
         },

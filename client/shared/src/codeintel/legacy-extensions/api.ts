@@ -667,12 +667,11 @@ export interface Configuration<C extends object> {
  * or more values, or an AsyncIterable that yields zero or more values.
  */
 export type ProviderResult<T> =
-    | T
-    | undefined
-    | null
-    | Promise<T | undefined | null>
-    | Observable<T | undefined | null>
-    | AsyncIterable<T | undefined | null>
+    // | T
+    // | undefined
+    // | null
+    // | Promise<T | undefined | null>
+    Observable<T | undefined | null>
 
 /** The kinds of markup that can be used. */
 export enum MarkupKind {

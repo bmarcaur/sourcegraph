@@ -9,6 +9,7 @@ import { getModeFromPath } from '../languages'
 import { parseRepoURI } from '../util/url'
 import { createProviders, SourcegraphProviders } from './legacy-extensions/providers'
 import { RedactingLogger } from './legacy-extensions/logging'
+import { from, Observable } from 'rxjs'
 
 export type QueryGraphQLFn<T> = () => Promise<T>
 
@@ -19,7 +20,7 @@ export interface CodeIntelAPI {
         textParameters: TextDocumentPositionParameters,
         context: sourcegraph.ReferenceContext
     ): Promise<clientType.Location[]>
-    getHover(textParameters: TextDocumentPositionParameters): Promise<HoverMerged>
+    getHover(textParameters: TextDocumentPositionParameters): Observable<HoverMerged>
     getDocumentHighlights(textParameters: TextDocumentPositionParameters): Promise<sourcegraph.DocumentHighlight[]>
 }
 
@@ -39,12 +40,20 @@ class DefaultCodeIntelAPI implements CodeIntelAPI {
         throw new Error('Method not implemented.')
     }
     getDefinition(textParameters: TextDocumentPositionParameters): Promise<clientType.Location[]> {
-        textParameters.textDocument
         return Promise.resolve([])
     }
-    getHover(textParameters: TextDocumentPositionParameters): Promise<HoverMerged> {
-        console.log('TODO')
-        return Promise.resolve({ contents: [] })
+    getHover(textParameters: TextDocumentPositionParameters): Observable<HoverMerged> {
+        const x = findLanguageMatchingDocument(textParameters.textDocument)?.providers.hover.provideHover(
+            {} as any,
+            {} as any
+        )
+        if (!x) {
+            return from(Promise.resolve({ contents: [] }))
+        }
+        x.forEach(y => {
+            console.log({ y })
+        })
+        return from(Promise.resolve({ contents: [] }))
     }
     getDocumentHighlights(textParameters: TextDocumentPositionParameters): Promise<sourcegraph.DocumentHighlight[]> {
         return Promise.resolve([])
@@ -64,6 +73,7 @@ function findLanguageMatchingDocument(textDocument: TextDocumentIdentifier): Lan
     }
     return undefined
 }
+
 interface Language {
     spec: LanguageSpec
     selector: DocumentSelector

@@ -10,7 +10,7 @@ import { getDocumentNode } from '@sourcegraph/http-client'
 import { toPrettyBlobURL } from '@sourcegraph/shared/src/util/url'
 
 import { getWebGraphQLClient } from '../backend/graphql'
-import { CodeIntelSearchVariables } from '../graphql-operations'
+import { LegacyCodeIntelSearch4Variables } from '../graphql-operations'
 
 import { LanguageSpec } from './language-specs/languagespec'
 import { Location, buildSearchBasedLocation, split } from './location'
@@ -327,7 +327,7 @@ async function executeSearchQuery(terms: string[]): Promise<SearchResult[]> {
         }
     }
     const client = await getWebGraphQLClient()
-    const result = await client.query<Response, CodeIntelSearchVariables>({
+    const result = await client.query<Response, LegacyCodeIntelSearch4Variables>({
         query: getDocumentNode(CODE_INTEL_SEARCH_QUERY),
         variables: {
             query: terms.join(' '),
