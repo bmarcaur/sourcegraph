@@ -5,6 +5,7 @@ import { from, Observable, Subscription } from 'rxjs'
 import { first, map } from 'rxjs/operators'
 import { Unsubscribable } from 'sourcegraph'
 import { newCodeIntelAPI } from '../../codeintel/api'
+import { CodeIntelContext } from '../../codeintel/legacy-extensions/api'
 
 import { PlatformContext, ClosableEndpointPair } from '../../platform/context'
 import { isSettingsValid } from '../../settings/settings'
@@ -97,11 +98,23 @@ export async function createExtensionHostClientConnection(
 
     // TODO(tj): return MainThreadAPI and add to Controller interface
     // to allow app to interact with APIs whose state lives in the main thread
-    return { subscription, api: injectNewCodeintel(proxy), mainThreadAPI: newAPI, exposedToClient }
+    return {
+        subscription,
+        api: injectNewCodeintel(proxy, {
+            requestGraphQL: platformContext.requestGraphQL,
+            settings: platformContext.settings,
+            // TODO searchContext: ???
+        }),
+        mainThreadAPI: newAPI,
+        exposedToClient,
+    }
 }
 
-function injectNewCodeintel(old: comlink.Remote<FlatExtensionHostAPI>): comlink.Remote<FlatExtensionHostAPI> {
-    const codeintel = newCodeIntelAPI({} as any)
+function injectNewCodeintel(
+    old: comlink.Remote<FlatExtensionHostAPI>,
+    context: CodeIntelContext
+): comlink.Remote<FlatExtensionHostAPI> {
+    const codeintel = newCodeIntelAPI(context)
     function thenMaybeLoadingResult<T>(promise: Observable<T>): Observable<MaybeLoadingResult<T>> {
         return promise.pipe(
             map(result => {

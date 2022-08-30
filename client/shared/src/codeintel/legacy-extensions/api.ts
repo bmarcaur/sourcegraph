@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs'
 import { Settings } from '@sourcegraph/shared/src/settings/settings'
 import { GraphQLResult } from '@sourcegraph/http-client'
+import { PlatformContext } from '../../platform/context'
 
 export interface Unsubscribable {
     unsubscribe(): void
@@ -989,7 +990,9 @@ export function requestGraphQL<T>(query: string, vars?: { [name: string]: unknow
             'code-intel: requestGraphQL not available. To fix this problem, call `updateCodeIntelContext` before invoking code-intel APIs.'
         )
     }
-    return context.requestGraphQL(query, vars)
+    return context
+        .requestGraphQL<T, any>({ request: query, variables: vars as any, mightContainPrivateInfo: true })
+        .toPromise()
 }
 
 export function searchContext(): string | undefined {
@@ -1007,11 +1010,9 @@ export function updateCodeIntelContext(newContext: CodeIntelContext): void {
     context = newContext
 }
 
-export interface CodeIntelContext {
-    searchContext?: string | undefined
+export interface CodeIntelContext extends Pick<PlatformContext, 'requestGraphQL'> {
+    searchContext?: string
     settings: Settings
-
-    requestGraphQL(request: string, variables: any): Promise<GraphQLResult<any>>
 }
 
 export interface ExtensionContext {
