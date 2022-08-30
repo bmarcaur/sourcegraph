@@ -15,7 +15,6 @@ import { NotificationType, PlainNotification } from '../extension/extensionHostA
 import { ProxySubscription } from './api/common'
 import { getEnabledExtensions } from './enabledExtensions'
 import { updateSettings } from './services/settings'
-import { newCodeIntelAPI } from '../../codeintel/api'
 import { GraphQLResult } from '@sourcegraph/http-client'
 
 /** A registered command in the command registry. */

@@ -1014,3 +1014,28 @@ export interface CodeIntelContext {
 
     requestGraphQL(request: string, variables: any): Promise<GraphQLResult<any>>
 }
+
+export interface ExtensionContext {
+    /**
+     * An object that maintains subscriptions to resources that should be freed when the extension is
+     * deactivated.
+     *
+     * When an extension is deactivated, first its exported `deactivate` function is called (if one exists).
+     * The `deactivate` function may be async, in which case deactivation blocks on it finishing. Next,
+     * regardless of whether the `deactivate` function finished successfully or rejected with an error, all
+     * unsubscribables passed to {@link ExtensionContext#subscriptions#add} are unsubscribed from.
+     *
+     * (An extension is deactivated when the user disables it, or after an arbitrary time period if its
+     * activationEvents no longer evaluate to true.)
+     */
+    subscriptions: {
+        /**
+         * Mark a resource's teardown function to be called when the extension is deactivated.
+         *
+         * @param unsubscribable An {@link Unsubscribable} that frees (unsubscribes from) a resource, or a
+         * plain function that does the same. Async functions are not supported. (If deactivation requires
+         * async operations, make the `deactivate` function async; that is supported.)
+         */
+        add: (unsubscribable: Unsubscribable | (() => void)) => void
+    }
+}

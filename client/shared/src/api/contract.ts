@@ -25,7 +25,6 @@ import {
     ContributionOptions,
 } from './extension/extensionHostApi'
 import { ExtensionViewer, TextDocumentData, ViewerData, ViewerId, ViewerUpdate } from './viewerTypes'
-import { CodeIntelAPI } from '../codeintel/api'
 
 /**
  * This is exposed from the extension host thread to the main thread

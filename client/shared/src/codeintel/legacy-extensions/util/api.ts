@@ -345,7 +345,7 @@ export class API {
      */
     public async findReposViaSearch(searchQuery: string): Promise<string[]> {
         const query = gql`
-            query LegacyCodeIntelSearch($query: String!) {
+            query CodeIntelSearch($query: String!) {
                 search(query: $query) {
                     results {
                         results {

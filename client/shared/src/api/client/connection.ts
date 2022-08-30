@@ -113,8 +113,13 @@ function injectNewCodeintel(old: comlink.Remote<FlatExtensionHostAPI>): comlink.
         console.log({ textParameters })
         return proxySubscribable(from(thenMaybeLoadingResult(codeintel.getHover(textParameters))))
     }
-    return {
-        ...old,
-        getHover: getHover as any,
-    }
+    return new Proxy(old, {
+        get(target, prop, receiver) {
+            if (prop === 'getHover') {
+                console.log({ arguments })
+                return getHover
+            }
+            return Reflect.get(target, prop, ...arguments)
+        },
+    })
 }

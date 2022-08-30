@@ -34,6 +34,7 @@ class DefaultCodeIntelAPI implements CodeIntelAPI {
         return Promise.resolve([])
     }
     getHover(textParameters: TextDocumentPositionParameters): Promise<HoverMerged> {
+        console.log('TODO')
         return Promise.resolve({ contents: [] })
     }
     getDocumentHighlights(textParameters: TextDocumentPositionParameters): Promise<sourcegraph.DocumentHighlight[]> {
