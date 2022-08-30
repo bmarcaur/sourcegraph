@@ -139,6 +139,7 @@ export const initMainThreadAPI = (
     const codeintel = newCodeIntelAPI({
         requestGraphQL,
         settings: platformContext.settings,
+        searchContext: platformContext.searc,
     })
 
     const api: MainThreadAPI = {
