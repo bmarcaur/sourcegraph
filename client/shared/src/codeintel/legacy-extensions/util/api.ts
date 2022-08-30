@@ -72,7 +72,7 @@ export class API {
         }
 
         const queryWithFork = gql`
-            query ResolveRepo($name: String!) {
+            query LegacyResolveRepo($name: String!) {
                 repository(name: $name) {
                     id
                     name
@@ -83,7 +83,7 @@ export class API {
         `
 
         const queryWithoutFork = gql`
-            query ResolveRepo($name: String!) {
+            query LegacyResolveRepo2($name: String!) {
                 repository(name: $name) {
                     name
                 }
@@ -345,7 +345,7 @@ export class API {
      */
     public async findReposViaSearch(searchQuery: string): Promise<string[]> {
         const query = gql`
-            query CodeIntelSearch($query: String!) {
+            query LegacyCodeIntelSearch($query: String!) {
                 search(query: $query) {
                     results {
                         results {
@@ -632,7 +632,7 @@ function buildSearchQuery(fileLocal: boolean): string {
 
     if (fileLocal) {
         return gql`
-            query CodeIntelSearch($query: String!) {
+            query LegacyCodeIntelSearch2($query: String!) {
                 search(query: $query) {
                     ...SearchResults
                     ...FileLocal
@@ -644,7 +644,7 @@ function buildSearchQuery(fileLocal: boolean): string {
     }
 
     return gql`
-        query CodeIntelSearch($query: String!) {
+        query LegacyCodeIntelSearch3($query: String!) {
             search(query: $query) {
                 ...SearchResults
             }
@@ -743,7 +743,7 @@ const symbolInfoFlexibleToCanonical = (flexible: SymbolInfoFlexible): SymbolInfo
 })
 
 const symbolInfoDefinitionQueryWithoutRange = gql`
-    query SymbolInfo($repository: String!, $commit: String!, $path: String!, $line: Int!, $character: Int!) {
+    query LegacySymbolInfo($repository: String!, $commit: String!, $path: String!, $line: Int!, $character: Int!) {
         repository(name: $repository) {
             commit(rev: $commit) {
                 blob(path: $path) {
@@ -765,7 +765,7 @@ const symbolInfoDefinitionQueryWithoutRange = gql`
 `
 
 const symbolInfoDefinitionQueryWithRange = gql`
-    query SymbolInfo($repository: String!, $commit: String!, $path: String!, $line: Int!, $character: Int!) {
+    query LegacySymbolInfo2($repository: String!, $commit: String!, $path: String!, $line: Int!, $character: Int!) {
         repository(name: $repository) {
             commit(rev: $commit) {
                 blob(path: $path) {
