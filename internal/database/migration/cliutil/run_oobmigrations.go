@@ -51,6 +51,7 @@ func RunOutOfBandMigrations(
 			ctx,
 			db,
 			false,
+			true,
 			registerMigrators,
 			out,
 			ids,
@@ -76,6 +77,7 @@ func runOutOfBandMigrations(
 	ctx context.Context,
 	db database.DB,
 	dryRun bool,
+	up bool,
 	registerMigrations oobmigration.RegisterMigratorsFunc,
 	out *output.Output,
 	ids []int,
@@ -104,6 +106,10 @@ func runOutOfBandMigrations(
 	out.WriteLine(output.Linef(output.EmojiFingerPointRight, output.StyleReset, "Running out of band migrations %v", ids))
 	if dryRun {
 		return nil
+	}
+
+	if err := runner.UpdateDirection(ctx, ids, !up); err != nil {
+		return err
 	}
 
 	go runner.StartPartial(ids)
