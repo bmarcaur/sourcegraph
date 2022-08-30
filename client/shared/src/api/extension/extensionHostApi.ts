@@ -58,7 +58,6 @@ import { ExtensionHostState } from './extensionHostState'
 import { addWithRollback } from './util'
 
 export function createExtensionHostAPI(state: ExtensionHostState): FlatExtensionHostAPI {
-    state.searchContext
     const getTextDocument = (uri: string): ExtensionDocument => {
         const textDocument = state.textDocuments.get(uri)
         if (!textDocument) {

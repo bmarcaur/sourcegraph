@@ -128,23 +128,15 @@ export const initMainThreadAPI = (
         commandErrors,
     }
 
-    const requestGraphQL = (request: string, variables: any): Promise<GraphQLResult<any>> =>
-        platformContext
-            .requestGraphQL({
-                request,
-                variables,
-                mightContainPrivateInfo: true,
-            })
-            .toPromise()
-    const codeintel = newCodeIntelAPI({
-        requestGraphQL,
-        settings: platformContext.settings,
-        searchContext: platformContext.searc,
-    })
-
     const api: MainThreadAPI = {
-        codeintel,
-        requestGraphQL,
+        requestGraphQL: (request: string, variables: any): Promise<GraphQLResult<any>> =>
+            platformContext
+                .requestGraphQL({
+                    request,
+                    variables,
+                    mightContainPrivateInfo: true,
+                })
+                .toPromise(),
         applySettingsEdit: edit => updateSettings(platformContext, edit),
         // Commands
         executeCommand: (command, args) => executeCommand({ command, args }),

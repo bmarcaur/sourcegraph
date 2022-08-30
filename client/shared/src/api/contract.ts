@@ -229,6 +229,4 @@ export interface MainThreadAPI {
      * (e.g. browser extensions, where extensions run in the background page).
      */
     logExtensionMessage(message?: any, ...optionalParameters: any[]): void
-
-    codeintel: CodeIntelAPI
 }
