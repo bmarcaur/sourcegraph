@@ -58,7 +58,7 @@ import { addWithRollback } from './util'
 import { newCodeIntelAPI } from '../../codeintel/api'
 
 export function createExtensionHostAPI(state: ExtensionHostState): FlatExtensionHostAPI {
-    const codeIntelAPI = newCodeIntelAPI()
+    const codeIntelAPI = newCodeIntelAPI({ searchContext: state.searchContext, settings: state.settings.value.final })
     function thenMaybeLoadingResult<T>(promise: Promise<T>): Promise<MaybeLoadingResult<T>> {
         return promise.then<MaybeLoadingResult<T>>(result => {
             const maybeLoadingResult: MaybeLoadingResult<T> = { isLoading: false, result }

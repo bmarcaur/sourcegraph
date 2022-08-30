@@ -25,6 +25,7 @@ import {
     ContributionOptions,
 } from './extension/extensionHostApi'
 import { ExtensionViewer, TextDocumentData, ViewerData, ViewerId, ViewerUpdate } from './viewerTypes'
+import { CodeIntelAPI } from '../codeintel/api'
 
 /**
  * This is exposed from the extension host thread to the main thread
@@ -228,4 +229,6 @@ export interface MainThreadAPI {
      * (e.g. browser extensions, where extensions run in the background page).
      */
     logExtensionMessage(message?: any, ...optionalParameters: any[]): void
+
+    codeintel: CodeIntelAPI
 }

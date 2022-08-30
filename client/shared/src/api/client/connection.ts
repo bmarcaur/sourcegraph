@@ -2,6 +2,7 @@ import * as comlink from 'comlink'
 import { from, Subscription } from 'rxjs'
 import { first } from 'rxjs/operators'
 import { Unsubscribable } from 'sourcegraph'
+import { CodeIntelAPI, newCodeIntelAPI } from '../../codeintel/api'
 
 import { PlatformContext, ClosableEndpointPair } from '../../platform/context'
 import { isSettingsValid } from '../../settings/settings'
@@ -55,6 +56,7 @@ export async function createExtensionHostClientConnection(
 ): Promise<{
     subscription: Unsubscribable
     api: comlink.Remote<FlatExtensionHostAPI>
+    codeintel: CodeIntelAPI
     mainThreadAPI: MainThreadAPI
     exposedToClient: ExposedToClient
 }> {
@@ -93,5 +95,5 @@ export async function createExtensionHostClientConnection(
 
     // TODO(tj): return MainThreadAPI and add to Controller interface
     // to allow app to interact with APIs whose state lives in the main thread
-    return { subscription, api: proxy, mainThreadAPI: newAPI, exposedToClient }
+    return { subscription, api: proxy, mainThreadAPI: newAPI, exposedToClient, codeintel: newCodeIntelAPI() }
 }

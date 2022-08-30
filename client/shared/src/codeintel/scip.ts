@@ -1,6 +1,6 @@
 // TODO: Eventually we'll import the actual lsif-typed protobuf file in this project,
 // but it doesn't make sense to do so right now.
-import * as sourcegraph from './legacy-extensions/legacy-interfaces'
+import * as sourcegraph from './legacy-extensions/api'
 
 export interface JsonDocument {
     occurrences?: JsonOccurrence[]
@@ -18,20 +18,26 @@ export interface JsonOccurrence {
 
 export class Position implements sourcegraph.Position {
     constructor(public readonly line: number, public readonly character: number) {}
+    public static of(position: sourcegraph.Position): Position {
+        return new Position(position.line, position.character)
+    }
 
-    public isSmaller(other: Position): boolean {
+    public isSmaller(other: sourcegraph.Position): boolean {
         return this.compare(other) < 0
     }
-    public isSmallerOrEqual(other: Position): boolean {
+    public isSmallerOrEqual(other: sourcegraph.Position): boolean {
         return this.compare(other) <= 0
     }
-    public isGreater(other: Position): boolean {
+    public isGreater(other: sourcegraph.Position): boolean {
         return this.compare(other) > 0
     }
-    public isGreaterOrEqual(other: Position): boolean {
+    public isGreaterOrEqual(other: sourcegraph.Position): boolean {
         return this.compare(other) >= 0
     }
-    public compare(other: Position): number {
+    public isEqual(other: sourcegraph.Position): boolean {
+        return this.compare(other) === 0
+    }
+    public compare(other: sourcegraph.Position): number {
         if (this.line !== other.line) {
             return this.line - other.line
         }
@@ -44,7 +50,7 @@ export class Range {
     public static of(startLine: number, startCharacter: number, endLine: number, endCharacter: number) {
         return new Range(new Position(startLine, startCharacter), new Position(endLine, endCharacter))
     }
-    public contains(position: Position) {
+    public contains(position: sourcegraph.Position) {
         return this.start.isSmallerOrEqual(position) && this.end.isGreater(position)
     }
     public withStart(newStart: Position): Range {

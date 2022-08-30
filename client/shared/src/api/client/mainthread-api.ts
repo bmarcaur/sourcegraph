@@ -15,6 +15,8 @@ import { NotificationType, PlainNotification } from '../extension/extensionHostA
 import { ProxySubscription } from './api/common'
 import { getEnabledExtensions } from './enabledExtensions'
 import { updateSettings } from './services/settings'
+import { newCodeIntelAPI } from '../../codeintel/api'
+import { GraphQLResult } from '@sourcegraph/http-client'
 
 /** A registered command in the command registry. */
 export interface CommandEntry {
@@ -126,16 +128,23 @@ export const initMainThreadAPI = (
         commandErrors,
     }
 
+    const requestGraphQL = (request: string, variables: any): Promise<GraphQLResult<any>> =>
+        platformContext
+            .requestGraphQL({
+                request,
+                variables,
+                mightContainPrivateInfo: true,
+            })
+            .toPromise()
+    const codeintel = newCodeIntelAPI({
+        requestGraphQL,
+        settings: platformContext.settings,
+    })
+
     const api: MainThreadAPI = {
+        codeintel,
+        requestGraphQL,
         applySettingsEdit: edit => updateSettings(platformContext, edit),
-        requestGraphQL: (request, variables) =>
-            platformContext
-                .requestGraphQL({
-                    request,
-                    variables,
-                    mightContainPrivateInfo: true,
-                })
-                .toPromise(),
         // Commands
         executeCommand: (command, args) => executeCommand({ command, args }),
         registerCommand: (command, run) => {

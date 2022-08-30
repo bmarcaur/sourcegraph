@@ -1,6 +1,8 @@
 import { HoverMerged, TextDocumentPositionParameters } from '@sourcegraph/client-api'
-import * as sourcegraph from 'sourcegraph'
+import * as sourcegraph from './legacy-extensions/api'
 import * as clientType from '@sourcegraph/extension-api-types'
+
+export type QueryGraphQLFn<T> = () => Promise<T>
 
 export interface CodeIntelAPI {
     hasReferenceProvidersForDocument(textParameters: TextDocumentPositionParameters): Promise<boolean>
@@ -13,7 +15,8 @@ export interface CodeIntelAPI {
     getDocumentHighlights(textParameters: TextDocumentPositionParameters): Promise<sourcegraph.DocumentHighlight[]>
 }
 
-export function newCodeIntelAPI(): CodeIntelAPI {
+export function newCodeIntelAPI(context: sourcegraph.CodeIntelContext): CodeIntelAPI {
+    sourcegraph.updateCodeIntelContext(context)
     return new DefaultCodeIntelAPI()
 }
 
