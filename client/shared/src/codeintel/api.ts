@@ -1,4 +1,9 @@
-import { HoverMerged, TextDocumentIdentifier, TextDocumentPositionParameters } from '@sourcegraph/client-api'
+import {
+    fromHoverMerged,
+    HoverMerged,
+    TextDocumentIdentifier,
+    TextDocumentPositionParameters,
+} from '@sourcegraph/client-api'
 import * as sourcegraph from './legacy-extensions/api'
 import * as clientType from '@sourcegraph/extension-api-types'
 import { languageSpecs } from './legacy-extensions/language-specs/languages'
@@ -10,6 +15,8 @@ import { parseRepoURI } from '../util/url'
 import { createProviders, SourcegraphProviders } from './legacy-extensions/providers'
 import { RedactingLogger } from './legacy-extensions/logging'
 import { from, Observable } from 'rxjs'
+import { map } from 'rxjs/operators'
+import { toPosition } from '../api/extension/api/types'
 
 export type QueryGraphQLFn<T> = () => Promise<T>
 
@@ -43,29 +50,31 @@ class DefaultCodeIntelAPI implements CodeIntelAPI {
         return Promise.resolve([])
     }
     getHover(textParameters: TextDocumentPositionParameters): Observable<HoverMerged> {
+        const document = toTextDocument(textParameters.textDocument)
+        const position = toPosition(textParameters.position)
         const x = findLanguageMatchingDocument(textParameters.textDocument)?.providers.hover.provideHover(
-            {} as any,
-            {} as any
+            document,
+            position
         )
         if (!x) {
             return from(Promise.resolve({ contents: [] }))
         }
-        x.forEach(y => {
-            console.log({ y })
-        })
-        return from(Promise.resolve({ contents: [] }))
+        return x.pipe(map(result => fromHoverMerged([result]) || { contents: [] }))
     }
     getDocumentHighlights(textParameters: TextDocumentPositionParameters): Promise<sourcegraph.DocumentHighlight[]> {
         return Promise.resolve([])
     }
 }
 
-function findLanguageMatchingDocument(textDocument: TextDocumentIdentifier): Language | undefined {
-    const document: Pick<TextDocument, 'uri' | 'languageId'> = {
+function toTextDocument(textDocument: TextDocumentIdentifier): sourcegraph.TextDocument {
+    return {
         uri: textDocument.uri,
         languageId: getModeFromPath(parseRepoURI(textDocument.uri).filePath || ''),
+        text: undefined,
     }
-
+}
+function findLanguageMatchingDocument(textDocument: TextDocumentIdentifier): Language | undefined {
+    const document: Pick<TextDocument, 'uri' | 'languageId'> = toTextDocument(textDocument)
     for (const language of languages) {
         if (match(language.selector, document)) {
             return language
